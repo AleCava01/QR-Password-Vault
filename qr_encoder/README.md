@@ -69,10 +69,3 @@ To install the required packages, you can use the following command:
 ```
 pip install pycryptodome qrcode[pil] pillow
 ```
-
-## Encryption Details 🔒
-The encryption uses AES-128 in CBC mode with the following parameters:
-- Key: A 16-byte key derived from the user-provided password (first 16 characters).
-- IV: A random 16-byte initialization vector (IV) generated using ```os.urandom(16)```.
-- Padding: The plaintext is padded to ensure it is a multiple of the AES block size (16 bytes).
-
