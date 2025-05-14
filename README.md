@@ -1,9 +1,9 @@
-# 🔐 QR Password Vault Project
+# QR Password Vault Project
 End-to-end encrypted QR code system for offline credential storage and retrieval.
 Generate AES-128 encrypted QR codes via a Python GUI and securely scan and decrypt them with a Flutter (Android/iOS) app protected by biometrics.
 This project is composed of two components: *QR Encoder* and *QR Keychain*.
 
-## ✨ QR Encoder
+## 🔐 [QR Encoder](https://github.com/AleCava01/QR-Password-Vault/tree/main/qr_encoder)
 A Python-based graphical user interface (GUI) that allows users to generate AES-128 encrypted QR codes. Users can input a password and a message—typically including the service name, username, password, and any other relevant account information. The input is then:
 
 1. Encrypted using AES in CBC mode with a randomly generated IV.
