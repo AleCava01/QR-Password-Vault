@@ -4,7 +4,7 @@
 /// The app uses the `mobile_scanner` package for QR code scanning,
 /// the `encrypt` package for AES decryption, and the
 /// `flutter_secure_storage` package to store and retrieve the encryption
-/// password securely.
+/// password and biometric preference securely.
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -13,24 +13,42 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:encrypt/encrypt.dart' as encrypt;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+// Import AuthScreen to potentially navigate to it, though not strictly needed for this toggle.
+// We are already navigating to ScanCodePage from AuthScreen.
+// For resetting password and re-initiating the auth flow, AuthScreen will pick up the new preference.
+// import 'auth_screen.dart'; // If you were to navigate back to AuthScreen explicitly from here.
 
-/// Secure storage instance for storing the encryption password.
+/// Secure storage instance.
 final secureStorage = FlutterSecureStorage();
 
+/// Secure storage key for the encryption password.
+const String _encryptionPasswordKey = 'encryption_password';
+
+/// Secure storage key for the biometricOnly preference.
+const String _biometricOnlyPreferenceKey = 'biometric_only_preference';
+
 /// Stores the encryption password securely in local storage.
-///
-/// @param password The password to store.
-///
-/// @return A Future indicating when the password is stored.
 Future<void> storePassword(String password) async {
-  await secureStorage.write(key: 'encryption_password', value: password);
+  await secureStorage.write(key: _encryptionPasswordKey, value: password);
 }
 
 /// Retrieves the stored encryption password from local storage.
-///
-/// @return A Future containing the stored password, or null if not found.
 Future<String?> retrievePassword() async {
-  return await secureStorage.read(key: 'encryption_password');
+  return await secureStorage.read(key: _encryptionPasswordKey);
+}
+
+/// Stores the biometricOnly preference.
+Future<void> storeBiometricPreference(bool isBiometricOnly) async {
+  await secureStorage.write(
+      key: _biometricOnlyPreferenceKey, value: isBiometricOnly.toString());
+}
+
+/// Retrieves the biometricOnly preference. Defaults to false if not set.
+Future<bool> retrieveBiometricPreference() async {
+  String? value = await secureStorage.read(key: _biometricOnlyPreferenceKey);
+  // Default to false (biometric or pin) if no preference is stored yet
+  if (value == null) return false;
+  return value == 'False';
 }
 
 /// The main page for scanning QR codes and decrypting them.
@@ -50,29 +68,56 @@ class _ScanCodePageState extends State<ScanCodePage> {
   Rect? _qrRect;
   Timer? _resetRectTimer;
   late String _encryptionPassword;
+  bool _isBiometricOnlyEnabled = true; // Default, will be loaded from storage
 
   @override
   void initState() {
     super.initState();
-    // Initialize the scanner controller with default settings.
     _scannerController = MobileScannerController(
       detectionSpeed: DetectionSpeed.normal,
       returnImage: false,
     );
-    // Load the encryption password from secure storage.
     _loadPassword();
+    _loadBiometricPreference(); // Load the biometric preference
+  }
+
+  Future<void> _loadBiometricPreference() async {
+    bool preference = await retrieveBiometricPreference();
+    if (mounted) {
+      setState(() {
+        _isBiometricOnlyEnabled = preference;
+      });
+    }
+  }
+
+  Future<void> _toggleBiometricPreference() async {
+    final newPreference = !_isBiometricOnlyEnabled;
+    await storeBiometricPreference(newPreference);
+    if (mounted) {
+      setState(() {
+        _isBiometricOnlyEnabled = newPreference;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            newPreference
+                ? 'Biometric only authentication enabled.'
+                : 'Biometric with device credentials enabled.',
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   /// Loads the encryption password from secure storage or prompts the user to enter it.
-  ///
-  /// This method checks if the password is already stored and if not, it asks the user to input it.
   Future<void> _loadPassword() async {
-    String? pwd = await secureStorage.read(key: 'encryption_password');
+    String? pwd = await secureStorage.read(key: _encryptionPasswordKey);
 
     if (pwd == null) {
       pwd = await _askPasswordDialog();
       if (pwd != null && pwd.isNotEmpty) {
-        await secureStorage.write(key: 'encryption_password', value: pwd);
+        await secureStorage.write(key: _encryptionPasswordKey, value: pwd);
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -81,21 +126,20 @@ class _ScanCodePageState extends State<ScanCodePage> {
               duration: Duration(seconds: 3),
             ),
           );
+          // Potentially navigate back or handle lack of password
         }
         return;
       }
     }
 
-    setState(() {
-      _encryptionPassword = pwd!;
-    });
+    if (mounted) {
+      setState(() {
+        _encryptionPassword = pwd!;
+      });
+    }
   }
 
   /// Prompts the user to enter the encryption password.
-  ///
-  /// This dialog ensures that the entered password is 16 characters long.
-  ///
-  /// @return The entered password, or null if the user cancels.
   Future<String?> _askPasswordDialog() async {
     TextEditingController controller = TextEditingController();
     String? errorText;
@@ -148,14 +192,13 @@ class _ScanCodePageState extends State<ScanCodePage> {
   }
 
   /// Handles QR code detection and performs AES decryption on the QR code content.
-  ///
-  /// @param capture The BarcodeCapture object containing detected barcodes.
   Future<void> _handleDetection(BarcodeCapture capture) async {
+    if (!mounted || _encryptionPassword.isEmpty) return; // Ensure password is loaded
+
     if (capture.barcodes.isNotEmpty) {
       final barcode = capture.barcodes.first;
       final String? rawQrValue = barcode.rawValue;
 
-      // Check QR code corners and update the scanning rectangle.
       if (barcode.corners.length == 4) {
         final corners = barcode.corners;
         final topLeft = corners[0];
@@ -163,9 +206,11 @@ class _ScanCodePageState extends State<ScanCodePage> {
         final rect = Rect.fromPoints(topLeft, bottomRight);
 
         if (_qrRect != rect) {
-          setState(() {
-            _qrRect = rect;
-          });
+          if (mounted) {
+            setState(() {
+              _qrRect = rect;
+            });
+          }
         }
 
         _resetRectTimer?.cancel();
@@ -178,7 +223,6 @@ class _ScanCodePageState extends State<ScanCodePage> {
         });
       }
 
-      // If QR code content exists, attempt to decrypt it.
       if (rawQrValue != null && rawQrValue.isNotEmpty) {
         String decryptedTextToShow;
         try {
@@ -221,14 +265,14 @@ class _ScanCodePageState extends State<ScanCodePage> {
               "Decryption error: ${e.toString().split(':').last.trim()}";
         }
 
-        // Display the decrypted text.
         if (_displayedValue != decryptedTextToShow) {
-          setState(() {
-            _displayedValue = decryptedTextToShow;
-          });
+          if (mounted) {
+            setState(() {
+              _displayedValue = decryptedTextToShow;
+            });
+          }
         }
 
-        // Clear the displayed text after a short delay.
         _resetTextTimer?.cancel();
         _resetTextTimer = Timer(const Duration(seconds: 7), () {
           if (mounted) {
@@ -241,10 +285,6 @@ class _ScanCodePageState extends State<ScanCodePage> {
     }
   }
 
-  /// Builds the UI of the page.
-  ///
-  /// This method contains the QR scanner, displays the decrypted text,
-  /// and provides buttons for controlling the flashlight and resetting the password.
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -277,11 +317,12 @@ class _ScanCodePageState extends State<ScanCodePage> {
           MobileScanner(
             controller: _scannerController,
             onDetect: _handleDetection,
-            errorBuilder: (context, error) {
-              return const Center(
+            errorBuilder: (context, error) { // Added child parameter
+              //print("MobileScanner Error: ${error.name}, ${error.errorDetails}"); // Log the error
+              return Center(
                 child: Text(
-                  "Camera error",
-                  style: TextStyle(color: Colors.red, fontSize: 20),
+                  "Camera error: $error",
+                  style: const TextStyle(color: Colors.red, fontSize: 20),
                 ),
               );
             },
@@ -308,8 +349,7 @@ class _ScanCodePageState extends State<ScanCodePage> {
                 decoration: BoxDecoration(
                   border: Border.all(
                     color:
-                        _displayedValue == null ||
-                                _displayedValue!.startsWith("Error")
+                        _displayedValue == null || _displayedValue!.startsWith("Decryption error")
                             ? Colors.orangeAccent
                             : Colors.greenAccent,
                     width: 3.0,
@@ -328,10 +368,9 @@ class _ScanCodePageState extends State<ScanCodePage> {
                   color: Colors.black.withAlpha(204),
                   borderRadius: BorderRadius.circular(12.0),
                   border: Border.all(
-                    color:
-                        _displayedValue!.startsWith("Error")
-                            ? Colors.redAccent
-                            : Colors.green,
+                    color: _displayedValue!.startsWith("Decryption error")
+                        ? Colors.redAccent
+                        : Colors.green,
                     width: 2.0,
                   ),
                   boxShadow: [
@@ -350,7 +389,7 @@ class _ScanCodePageState extends State<ScanCodePage> {
                     fontWeight: FontWeight.w500,
                   ),
                   textAlign: TextAlign.center,
-                  maxLines: null,
+                  maxLines: null, // Allow text to wrap
                   overflow: TextOverflow.visible,
                 ),
               ),
@@ -386,6 +425,7 @@ class _ScanCodePageState extends State<ScanCodePage> {
             ),
         ],
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.end,
@@ -393,14 +433,14 @@ class _ScanCodePageState extends State<ScanCodePage> {
           FloatingActionButton(
             heroTag: 'reset_password',
             onPressed: () async {
-              await secureStorage.delete(key: 'encryption_password');
+              await secureStorage.delete(key: _encryptionPasswordKey);
 
               if (!mounted) return;
 
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text(
-                    "Encryption password removed from secure storage.",
+                    "Encryption password removed. Please restart or re-authenticate.",
                   ),
                   duration: Duration(seconds: 2),
                 ),
@@ -410,6 +450,9 @@ class _ScanCodePageState extends State<ScanCodePage> {
 
               if (!mounted) return;
 
+              // Instead of pushing ScanCodePage again, you might want to navigate
+              // to a screen that forces re-authentication, like AuthScreen.
+              // For simplicity, current behavior reloads ScanCodePage which will trigger password prompt.
               Navigator.of(context).pushReplacement(
                 MaterialPageRoute(builder: (context) => const ScanCodePage()),
               );
@@ -417,6 +460,18 @@ class _ScanCodePageState extends State<ScanCodePage> {
             backgroundColor: Colors.redAccent,
             tooltip: 'Reset Password',
             child: const Icon(Icons.lock_reset),
+          ),
+          const SizedBox(height: 12),
+          FloatingActionButton(
+            heroTag: 'toggle_biometric_preference',
+            onPressed: _toggleBiometricPreference,
+            tooltip: _isBiometricOnlyEnabled
+                ? 'Auth: Biometric Only'
+                : 'Auth: Biometric or Device PIN/Pass',
+            backgroundColor: _isBiometricOnlyEnabled ? Colors.blueAccent : Colors.teal,
+            child: Icon(
+              _isBiometricOnlyEnabled ? Icons.fingerprint : Icons.phonelink_lock_outlined,
+            ),
           ),
           const SizedBox(height: 12),
           FloatingActionButton(
