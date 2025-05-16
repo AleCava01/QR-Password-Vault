@@ -19,5 +19,4 @@ This app enables safe, offline retrieval of stored credentials without relying o
 <br>
 <br>
 
-
-![decode_diagram drawio (4)](https://github.com/user-attachments/assets/7ca2d486-2e5d-48ba-82b3-a7383cabb39b)
+![decode_diagram drawio (10)](https://github.com/user-attachments/assets/bfb158ea-895b-4a38-94e8-70fbd43cf6b5)
