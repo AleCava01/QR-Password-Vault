@@ -13,11 +13,28 @@ dependencies:
   encrypt: ^5.0.3
   local_auth: ^2.3.0
   flutter_secure_storage: ^9.2.4
+  flutter_svg: ^2.1.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.3
+
+flutter_launcher_icons:
+  android: "launcher_icon" # can be true to use the default ic_launcher, or a string for a custom name
+  ios: true
+  image_path: "assets/images/app_icon_source.png" # **IMPORTANT: Path to your high-resolution source icon**
+  min_sdk_android: 21 # Optional: if you need to specify a min SDK version for adaptive icons
+  remove_alpha_ios: true # Optional: to remove alpha channel for iOS icons
+  # You can also generate adaptive icons for Android:
+  # adaptive_icon_background: "#FFFFFF" # Or path to a hex color e.g. assets/images/adaptive_icon_background.png
+  # adaptive_icon_foreground: "assets/images/adaptive_icon_foreground.png" # Path to your foreground image
 
 flutter:
   uses-material-design: true
+
+  assets:
+    - assets/images/ # This line includes all files in the assets/images/ folder
+    # If your logo is directly in assets, you'd use:
+    # - assets/app_logo.svg

@@ -13,6 +13,8 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:encrypt/encrypt.dart' as encrypt;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter_svg/flutter_svg.dart'; // Import flutter_svg
+
 // Import AuthScreen to potentially navigate to it, though not strictly needed for this toggle.
 // We are already navigating to ScanCodePage from AuthScreen.
 // For resetting password and re-initiating the auth flow, AuthScreen will pick up the new preference.
@@ -40,7 +42,9 @@ Future<String?> retrievePassword() async {
 /// Stores the biometricOnly preference.
 Future<void> storeBiometricPreference(bool isBiometricOnly) async {
   await secureStorage.write(
-      key: _biometricOnlyPreferenceKey, value: isBiometricOnly.toString());
+    key: _biometricOnlyPreferenceKey,
+    value: isBiometricOnly.toString(),
+  );
 }
 
 /// Retrieves the biometricOnly preference. Defaults to false if not set.
@@ -193,7 +197,8 @@ class _ScanCodePageState extends State<ScanCodePage> {
 
   /// Handles QR code detection and performs AES decryption on the QR code content.
   Future<void> _handleDetection(BarcodeCapture capture) async {
-    if (!mounted || _encryptionPassword.isEmpty) return; // Ensure password is loaded
+    if (!mounted || _encryptionPassword.isEmpty)
+      return; // Ensure password is loaded
 
     if (capture.barcodes.isNotEmpty) {
       final barcode = capture.barcodes.first;
@@ -291,14 +296,32 @@ class _ScanCodePageState extends State<ScanCodePage> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF1E1E1E),
         elevation: 0,
-        title: const Text(
-          "QR Keychain - scan & decrypt",
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1.2,
-          ),
+        title: Row(
+          // Use Row to place the logo and title side by side
+          mainAxisAlignment: MainAxisAlignment.center, // Center the Row content
+          mainAxisSize: MainAxisSize.min, // Make the row take minimum space
+          children: [
+            // Add the app logo here
+            SvgPicture.asset(
+              'assets/images/app_logo.svg',
+              semanticsLabel: 'App Logo', // Add an accessibility label
+              height: 30, // Adjust height as needed
+              colorFilter: const ColorFilter.mode(
+                Colors.white,
+                BlendMode.srcIn,
+              ), // Optional: color the SVG
+            ),
+            const SizedBox(width: 8), // Add some spacing between logo and title
+            const Text(
+              "QR Keychain - scan & decrypt",
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.2,
+              ),
+            ),
+          ],
         ),
         centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.white),
@@ -317,7 +340,8 @@ class _ScanCodePageState extends State<ScanCodePage> {
           MobileScanner(
             controller: _scannerController,
             onDetect: _handleDetection,
-            errorBuilder: (context, error) { // Added child parameter
+            errorBuilder: (context, error) {
+              // Added child parameter
               //print("MobileScanner Error: ${error.name}, ${error.errorDetails}"); // Log the error
               return Center(
                 child: Text(
@@ -349,7 +373,8 @@ class _ScanCodePageState extends State<ScanCodePage> {
                 decoration: BoxDecoration(
                   border: Border.all(
                     color:
-                        _displayedValue == null || _displayedValue!.startsWith("Decryption error")
+                        _displayedValue == null ||
+                                _displayedValue!.startsWith("Decryption error")
                             ? Colors.orangeAccent
                             : Colors.greenAccent,
                     width: 3.0,
@@ -368,9 +393,10 @@ class _ScanCodePageState extends State<ScanCodePage> {
                   color: Colors.black.withAlpha(204),
                   borderRadius: BorderRadius.circular(12.0),
                   border: Border.all(
-                    color: _displayedValue!.startsWith("Decryption error")
-                        ? Colors.redAccent
-                        : Colors.green,
+                    color:
+                        _displayedValue!.startsWith("Decryption error")
+                            ? Colors.redAccent
+                            : Colors.green,
                     width: 2.0,
                   ),
                   boxShadow: [
@@ -465,12 +491,16 @@ class _ScanCodePageState extends State<ScanCodePage> {
           FloatingActionButton(
             heroTag: 'toggle_biometric_preference',
             onPressed: _toggleBiometricPreference,
-            tooltip: _isBiometricOnlyEnabled
-                ? 'Auth: Biometric Only'
-                : 'Auth: Biometric or Device PIN/Pass',
-            backgroundColor: _isBiometricOnlyEnabled ? Colors.blueAccent : Colors.teal,
+            tooltip:
+                _isBiometricOnlyEnabled
+                    ? 'Auth: Biometric Only'
+                    : 'Auth: Biometric or Device PIN/Pass',
+            backgroundColor:
+                _isBiometricOnlyEnabled ? Colors.blueAccent : Colors.teal,
             child: Icon(
-              _isBiometricOnlyEnabled ? Icons.fingerprint : Icons.phonelink_lock_outlined,
+              _isBiometricOnlyEnabled
+                  ? Icons.fingerprint
+                  : Icons.phonelink_lock_outlined,
             ),
           ),
           const SizedBox(height: 12),

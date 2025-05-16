@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart'; // Import the package
 import 'package:qr_keychain/pages/auth_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -13,10 +14,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    // Simulate a delay for loading (e.g., 2-3 seconds)
-    // In a real app, you might be fetching data, initializing services, etc.
     Timer(const Duration(seconds: 3), () {
-      // Navigate to the AuthScreen after the delay
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (context) => const AuthScreen()),
       );
@@ -26,15 +24,23 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // You can customize your splash screen's appearance here
       backgroundColor: Colors.blue, // Example background color
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            // Add your logo or any other widget
-            // Example: FlutterLogo
-            FlutterLogo(size: 100.0),
+            // **Use SvgPicture.asset for your SVG logo**
+            SvgPicture.asset(
+              'assets/images/app_logo.svg', // **Update with your actual path and filename**
+              height: 100.0, // Adjust the size as needed
+              width: 100.0, // Adjust the size as needed
+              // You can also add a placeholder or semantics label:
+              // placeholderBuilder: (BuildContext context) => Container(
+              //   padding: const EdgeInsets.all(30.0),
+              //   child: const CircularProgressIndicator(),
+              // ),
+              // semanticsLabel: 'App Logo'
+            ),
             const SizedBox(height: 24.0),
             const Text(
               'QR Keychain',
