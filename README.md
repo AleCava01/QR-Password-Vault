@@ -9,14 +9,15 @@ A Python-based graphical user interface (GUI) that allows users to generate AES-
 1. Encrypted using AES in CBC mode with a randomly generated IV.
 2. Encoded into a Base64 string.
 3. Converted into a QR code, which can be saved or printed directly from the interface.
+   
+<br>
 
-![encode_diagram drawio (2)](https://github.com/user-attachments/assets/44964de6-7e2a-4cdd-9f79-2b5702f3c9ca)
+![encode_diagram drawio (5)](https://github.com/user-attachments/assets/7cf90d46-9d6d-49e2-9e5a-125a85881293)
 
 ## 📱 [QR Keychain](https://github.com/AleCava01/QR-Password-Vault/tree/main/qr_keychain) - Access the Vault
 A Flutter mobile application for Android and iOS that scans printed or digital QR codes containing AES-128 encrypted credentials. Upon scanning, the data is decrypted and displayed—only after successful biometric authentication, ensuring secure access.
 
 This app enables safe, offline retrieval of stored credentials without relying on cloud services or network connections.
 <br>
-<br>
 
-![decode_diagram drawio (10)](https://github.com/user-attachments/assets/bfb158ea-895b-4a38-94e8-70fbd43cf6b5)
+![decode_diagram drawio (18)](https://github.com/user-attachments/assets/6e08b6a4-6eb2-47e3-8c68-0cad68a8767c)
